@@ -1,0 +1,232 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="OutlookClone.MainPage">
+
+    <Grid RowDefinitions="50,40,*,80">
+        <FlexLayout Grid.Row="0"
+                    HorizontalOptions="FillAndExpand"
+                    VerticalOptions="FillAndExpand"
+                    BackgroundColor="{StaticResource Primary}"
+                    JustifyContent="SpaceBetween">
+            <HorizontalStackLayout Margin="5,0,0,0"
+                                   Spacing="10">
+                <Label Text="&#xfa38;"
+                       FontFamily="FluentFilled"
+                       TextColor="{StaticResource Primary}"
+                       HorizontalTextAlignment="Center"
+                       HorizontalOptions="StartAndExpand"
+                       VerticalTextAlignment="Center"
+                       BackgroundColor="White"
+                       VerticalOptions="Center"
+                       WidthRequest="30"
+                       HeightRequest="30"
+                       FontSize="Large">
+                    <Label.Clip>
+                        <EllipseGeometry RadiusX="15"
+                                     RadiusY="15"
+                                     Center="15,15"/>
+                    </Label.Clip>
+                </Label>
+                <Label Text="Inbox"
+                       VerticalTextAlignment="Center"
+                       HorizontalOptions="StartAndExpand"
+                       TextColor="White"
+                       FontAttributes="Bold"
+                       FontSize="Large"/>
+            </HorizontalStackLayout>
+            <Label Text="&#xfb26;"
+                   FontFamily="FluentRegular"
+                   TextColor="White"
+                   VerticalOptions="Center"
+                   HorizontalOptions="EndAndExpand"
+                   HorizontalTextAlignment="End"
+                   WidthRequest="40"
+                   FontSize="Large"
+                   Margin="0,0,5,0"/>
+        </FlexLayout>
+
+        <FlexLayout Grid.Row="1"
+                    HorizontalOptions="FillAndExpand"
+                    VerticalOptions="FillAndExpand"
+                    BackgroundColor="{StaticResource Primary}"
+                    Padding="20,5"
+                    JustifyContent="SpaceBetween">
+            <HorizontalStackLayout Margin="5,0,0,0">
+                <Label Text="Focused"
+                       TextColor="White"
+                       VerticalOptions="Center"/>
+                <Switch/>
+            </HorizontalStackLayout>
+
+            <HorizontalStackLayout Margin="0,0,5,0"
+                                   Spacing="10">
+                <Label Text="&#xf408;"
+                       FontFamily="FluentRegular"
+                       TextColor="White"
+                       VerticalOptions="Center"
+                       HorizontalOptions="EndAndExpand"
+                       HorizontalTextAlignment="End"
+                       WidthRequest="40"
+                       FontSize="Large"/>
+                <Label Text="Filter"
+                       TextColor="White"
+                       VerticalOptions="Center"
+                       HorizontalOptions="EndAndExpand"
+                       HorizontalTextAlignment="End"/>
+            </HorizontalStackLayout>
+        </FlexLayout>
+
+        <CollectionView Grid.Row="2"
+                        x:Name="MessageCollection"
+                        HorizontalOptions="Fill"
+                        VerticalOptions="Fill">
+            <CollectionView.ItemTemplate>
+                <DataTemplate>
+                    <Grid ColumnDefinitions="50,*,50"
+                          RowDefinitions="25,20,40"
+                          HorizontalOptions="Fill"
+                          VerticalOptions="Fill"
+                          Padding="10,5,20,5">
+                        <Image WidthRequest="40"
+                               HeightRequest="40"
+                               Grid.RowSpan="3"
+                               VerticalOptions="Start"
+                               HorizontalOptions="Start"
+                               Aspect="AspectFill"
+                               Source="{Binding image}">
+                            <Image.Clip>
+                                <EllipseGeometry RadiusX="20"
+                                                 RadiusY="20"
+                                                 Center="20,20"/>
+                            </Image.Clip>
+                        </Image>
+                        <Label Grid.Row="0"
+                               Grid.Column="1"
+                               Text="{Binding character}"
+                               FontSize="18"
+                               FontAttributes="Bold"
+                               TextColor="Black"/>
+
+                        <Label Grid.Row="1"
+                               Grid.Column="1"
+                               Text="{Binding quote}"
+                               LineBreakMode="TailTruncation"
+                               VerticalOptions="Start"
+                               TextColor="Black"/>
+
+                        <Label Grid.Row="2"
+                               Grid.Column="1"
+                               Grid.ColumnSpan="2"
+                               Text="{Binding quote}"
+                               LineBreakMode="WordWrap"
+                               VerticalOptions="Start"
+                               TextColor="{StaticResource Tertiary}"/>
+
+                        <Label Grid.Row="0"
+                               Grid.Column="2"
+                               Text="Saturday"
+                               FontSize="12"
+                               TextColor="{StaticResource Tertiary}"/>
+                    </Grid>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+
+        <Button Grid.Row="2"
+                BackgroundColor="{StaticResource Primary}"
+                HorizontalOptions="EndAndExpand"
+                VerticalOptions="EndAndExpand"
+                Margin="20"
+                HeightRequest="60"
+                WidthRequest="60"
+                CornerRadius="30"
+                FontSize="30"
+                Text="+">
+            <Button.Shadow>
+                <Shadow Brush="Black"
+                        Offset="5,5"
+                        Radius="10"
+                        Opacity="0.5"/>
+            </Button.Shadow>
+        </Button>
+
+        <Grid Grid.Row="3"
+              HorizontalOptions="FillAndExpand"
+              VerticalOptions="FillAndExpand"
+              ColumnDefinitions="*,*,*"
+              Padding="5"
+              BackgroundColor="{StaticResource Secondary}">
+            <VerticalStackLayout HorizontalOptions="Center">
+                <Label Text="&#xf513;"
+                       FontFamily="FluentFilled"
+                       TextColor="{StaticResource Primary}"
+                       HorizontalTextAlignment="Center"
+                       HorizontalOptions="Center"
+                       VerticalTextAlignment="Center"
+                       VerticalOptions="Center"
+                       WidthRequest="30"
+                       HeightRequest="30"
+                       FontSize="30"/>
+                <Label Text="Email"
+                       TextColor="{StaticResource Primary}"
+                       HorizontalTextAlignment="Center"
+                       HorizontalOptions="Center"
+                       VerticalTextAlignment="Center"
+                       VerticalOptions="Center"
+                       FontSize="11"/>
+            </VerticalStackLayout>
+
+            <VerticalStackLayout HorizontalOptions="Center"
+                                 Grid.Column="1">
+                <Label Text="&#xfb26;"
+                       FontFamily="FluentRegular"
+                       TextColor="{StaticResource Tertiary}"
+                       HorizontalTextAlignment="Center"
+                       HorizontalOptions="Center"
+                       VerticalTextAlignment="Center"
+                       VerticalOptions="Center"
+                       WidthRequest="30"
+                       HeightRequest="30"
+                       FontSize="30"/>
+                <Label Text="Search"
+                       TextColor="{StaticResource Tertiary}"
+                       HorizontalTextAlignment="Center"
+                       HorizontalOptions="Center"
+                       VerticalTextAlignment="Center"
+                       VerticalOptions="Center"
+                       FontSize="11"/>
+            </VerticalStackLayout>
+
+            <VerticalStackLayout HorizontalOptions="Center"
+                                Grid.Column="2">
+                <Label Text="&#x03de;"
+                       FontFamily="FluentRegular"
+                       TextColor="{StaticResource Tertiary}"
+                       HorizontalTextAlignment="Center"
+                       HorizontalOptions="Center"
+                       VerticalTextAlignment="Center"
+                       VerticalOptions="Center"
+                       WidthRequest="30"
+                       HeightRequest="30"
+                       FontSize="30"/>
+                <Label Text="Calendar"
+                       TextColor="{StaticResource Tertiary}"
+                       FontSize="11"
+                       HorizontalTextAlignment="Center"
+                       HorizontalOptions="Center"
+                       VerticalTextAlignment="Center"
+                       VerticalOptions="Center"/>
+            </VerticalStackLayout>
+        </Grid>
+
+        <ActivityIndicator Grid.Row="2"
+                           Color="{StaticResource Primary}"
+                           IsRunning="True"
+                           IsEnabled="True"
+                           VerticalOptions="Center"
+                           HorizontalOptions="Center"
+                           x:Name="LoadingIndicator"/>
+
+    </Grid>
+</ContentPage>
