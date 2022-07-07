@@ -5,4 +5,4 @@ This repo has the code for a blog post I wrote for [.NET MAUI UI July](https://g
     
 You can read the blog post here: https://goforgoldman.com/2022/06/30/outlook-clone.html
 
-![outlookpreview](https://goforgoldman.com/images/OutlookClone.gif)
+![outlook preview](https://github.com/matt-goldman/outlook/raw/main/assets/OutlookClone.gif)
