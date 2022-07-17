@@ -47,4 +47,10 @@
 	  <None Remove="Resources\Fonts\FluentSystemIcons-Regular.ttf" />
 	  <None Remove="Models\" />
 	</ItemGroup>
+
+	<ItemGroup>
+	  <MauiXaml Update="Controls\OutlookSwitch.xaml">
+	    <Generator>MSBuild:Compile</Generator>
+	  </MauiXaml>
+	</ItemGroup>
 </Project>
