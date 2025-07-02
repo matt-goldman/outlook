@@ -11,6 +11,8 @@ namespace OutlookClone
 
         public ObservableCollection<Simpson> Simpsons = new();
 
+        private readonly List<Simpson> _sourceSimpsons = [];
+
         public MainPage()
         {
             InitializeComponent();
@@ -27,9 +29,33 @@ namespace OutlookClone
 
             var jsonResponse = await httpClient.GetFromJsonAsync<List<Simpson>>(contentUri);
 
-            jsonResponse.ForEach(s => Simpsons.Add(s));
+            
+            jsonResponse.ForEach(s => _sourceSimpsons.Add(s));
+            
+            foreach (var simpson in _sourceSimpsons)
+            {
+                Simpsons.Add(simpson);
+            }
 
             LoadingIndicator.IsVisible = false;
+        }
+
+        private void FocusToggle_OnToggleChanged(object sender, bool e)
+        {
+            if (e)
+            {
+                Simpsons.Clear();
+                
+                _sourceSimpsons.Where(s => s.character.Contains("Homer", StringComparison.OrdinalIgnoreCase))
+                               .ToList()
+                               .ForEach(s => Simpsons.Add(s));
+            }
+            else
+            {
+                Simpsons.Clear();
+                
+                _sourceSimpsons.ForEach(s => Simpsons.Add(s));
+            }
         }
     }
 }

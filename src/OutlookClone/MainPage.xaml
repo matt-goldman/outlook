@@ -12,23 +12,24 @@
                     JustifyContent="SpaceBetween">
             <HorizontalStackLayout Margin="5,0,0,0"
                                    Spacing="10">
-                <Label Text="&#xfa38;"
-                       FontFamily="FluentFilled"
-                       TextColor="{StaticResource Primary}"
-                       HorizontalTextAlignment="Center"
-                       HorizontalOptions="StartAndExpand"
-                       VerticalTextAlignment="Center"
-                       BackgroundColor="White"
-                       VerticalOptions="Center"
-                       WidthRequest="30"
-                       HeightRequest="30"
-                       FontSize="Large">
-                    <Label.Clip>
-                        <EllipseGeometry RadiusX="15"
-                                     RadiusY="15"
-                                     Center="15,15"/>
-                    </Label.Clip>
-                </Label>
+                <Border Background="White"
+                        Stroke="White"
+                        StrokeShape="Ellipse"
+                        Padding="0"
+                        HeightRequest="30"
+                        WidthRequest="30">
+                    <Label Text="&#xfa38;"
+                           Margin="0"
+                           FontFamily="FluentFilled"
+                           TextColor="{StaticResource Primary}"
+                           HorizontalTextAlignment="Center"
+                           HorizontalOptions="StartAndExpand"
+                           VerticalTextAlignment="Center"
+                           VerticalOptions="Center"
+                           WidthRequest="30"
+                           HeightRequest="30"
+                           FontSize="Large"/>
+                </Border>
                 <Label Text="Inbox"
                        VerticalTextAlignment="Center"
                        HorizontalOptions="StartAndExpand"
@@ -51,11 +52,17 @@
                     HorizontalOptions="FillAndExpand"
                     VerticalOptions="FillAndExpand"
                     BackgroundColor="{StaticResource Primary}"
-                    Padding="20,5"
                     JustifyContent="SpaceBetween"
                     AlignContent="Center">
-            <controls:OutlookSwitch VerticalOptions="Center"
-                                    Margin="0,0,0,5"/>
+            <controls:OutlookToggle VerticalOptions="Start"
+                                    WidthRequest="150"
+                                    HeightRequest="40"
+                                    PillColor="#FFFFFF"
+                                    SelectedTextColor="#2860C2"
+                                    UnselectedTextColor="#FFFFFF"
+                                    PillBackgroundColor="#1F4993"
+                                    x:Name="FocusToggle"
+                                    ToggleChanged="FocusToggle_OnToggleChanged"/>
 
             <HorizontalStackLayout Margin="0,0,5,0"
                                    Spacing="10">
