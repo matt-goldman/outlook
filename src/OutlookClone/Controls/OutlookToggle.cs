@@ -80,11 +80,9 @@ public class OutlookToggle : SKCanvasView
     {
         EnableTouchEvents = true;
         Touch += (s, e) => {
-            if (e.ActionType == SKTouchAction.Pressed)
-            {
-                IsToggled = !IsToggled;
-                AnimateToggle(IsToggled);
-            }
+            IsToggled = !IsToggled;
+            ToggleChanged?.Invoke(this, IsToggled);
+            AnimateToggle(IsToggled);
         };
     }
 
@@ -101,10 +99,8 @@ public class OutlookToggle : SKCanvasView
             animationProgress = (float)v;
             InvalidateSurface();
         }, start, end);
-        
-        ToggleChanged?.Invoke(this, newState);
 
-        animation.Commit(this, "ToggleAnimation", 16, 200, Easing.CubicInOut);
+        animation.Commit(this, "ToggleAnimation", 16, 200, Easing.SinInOut);
     }
 
     protected override void OnPaintSurface(SKPaintSurfaceEventArgs e)
