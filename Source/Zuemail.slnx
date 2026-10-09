@@ -2,6 +2,11 @@
   <Folder Name="/Solution Items/">
     <File Path="../LICENSE" />
     <File Path="../README.md" />
+    <File Path="../global.json" />
+    <File Path="Directory.Build.props" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="../tests/Zuemail.Core.Tests/Zuemail.Core.Tests.csproj" />
   </Folder>
   <Project Path="ConsoleServiceExample/ConsoleServiceExample.csproj" />
   <Project Path="Zuemail.Core/Zuemail.Core.csproj" />

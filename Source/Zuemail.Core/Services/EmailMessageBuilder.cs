@@ -1,4 +1,5 @@
-﻿using Zuemail.Core.Abstractions;
+﻿using System;
+using Zuemail.Core.Abstractions;
 using Zuemail.Core.Models;
 using Microsoft.Extensions.Options;
 
@@ -9,17 +10,44 @@ namespace Zuemail.Core.Services
         public EmailMessageBuilder(IOptions<IEmailMessage> options = null)
         {
             Template = options?.Value;
+            Email = (Template ?? EmailMessage.Default).Copy();
         }
 
-        public virtual IEmailMessage Email { get; protected set; } = EmailMessage.Default;
+        public virtual IEmailMessage Email { get; protected set; }
 
-        public virtual IEmailMessage Template { get; set; } = null;
+        private IEmailMessage _template;
+
+        public virtual IEmailMessage Template
+        {
+            get => _template;
+            set => _template = value?.Copy();
+        }
 
         public virtual IEmailMessageBuilder SaveAsTemplate()
         {
-            Template = Email.Copy();
+            Template = Email;
             return this;
         }
+
+        /// <inheritdoc/>
+        public virtual IEmailMessageBuilder Compose(Action<IEmailMessageBuilder> configure)
+        {
+            if (configure == null)
+                throw new ArgumentNullException(nameof(configure));
+            configure(this);
+            return this;
+        }
+
+        /// <inheritdoc/>
+        public virtual IEmailMessageBuilder Body(string plainText, string html = null)
+        {
+            Email.BodyText = plainText ?? string.Empty;
+            Email.BodyHtml = html ?? string.Empty;
+            return this;
+        }
+
+        /// <inheritdoc/>
+        public virtual IEmailMessage Build() => Email.Copy();
 
         public virtual IEmailMessageBuilder Header(string key, string value)
         {
@@ -81,6 +109,12 @@ namespace Zuemail.Core.Services
             return this;
         }
 
-        public virtual IEmailMessageBuilder Copy() => MemberwiseClone() as IEmailMessageBuilder;
+        public virtual IEmailMessageBuilder Copy()
+        {
+            var copy = (EmailMessageBuilder)MemberwiseClone();
+            copy.Email = Email.Copy();
+            copy.Template = Template;
+            return copy;
+        }
     }
 }

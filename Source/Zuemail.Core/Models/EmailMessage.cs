@@ -56,7 +56,26 @@ namespace Zuemail.Core.Models
             set => _bodyPreview = value;
         }
 
-        public virtual IEmailMessage Copy() => MemberwiseClone() as IEmailMessage;
+        /// <summary>Copies mutable message state without reading attachment content.</summary>
+        /// <returns>An independent message with copied contacts, collections, and byte arrays.</returns>
+        /// <remarks>Streams and other attachment objects remain borrowed caller-owned references.</remarks>
+        public virtual IEmailMessage Copy()
+        {
+            var copy = (EmailMessage)MemberwiseClone();
+            copy.Headers = new Dictionary<string, string>(Headers,
+                (Headers as Dictionary<string, string>)?.Comparer ?? StringComparer.Ordinal);
+            copy.From = From.Select(contact => contact.Copy()).ToList();
+            copy.ReplyTo = ReplyTo.Select(contact => contact.Copy()).ToList();
+            copy.To = To.Select(contact => contact.Copy()).ToList();
+            copy.Cc = Cc.Select(contact => contact.Copy()).ToList();
+            copy.Bcc = Bcc.Select(contact => contact.Copy()).ToList();
+            copy.Attachments = new Dictionary<string, object>(
+                (Attachments as Dictionary<string, object>)?.Comparer ?? StringComparer.Ordinal);
+            foreach (var attachment in Attachments)
+                copy.Attachments.Add(attachment.Key,
+                    attachment.Value is byte[] bytes ? bytes.Clone() : attachment.Value);
+            return copy;
+        }
 
         public override string ToString()
         {

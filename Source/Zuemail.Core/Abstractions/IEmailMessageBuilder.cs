@@ -1,10 +1,27 @@
-﻿namespace Zuemail.Core.Abstractions
+﻿using System;
+
+namespace Zuemail.Core.Abstractions
 {
     /// <summary>
     /// Interface for writing fluent emails.
     /// </summary>
     public interface IEmailMessageBuilder
     {
+        /// <summary>Applies reusable fluent configuration without sending.</summary>
+        /// <param name="configure">The composition executed immediately.</param>
+        /// <returns>This builder.</returns>
+        IEmailMessageBuilder Compose(Action<IEmailMessageBuilder> configure);
+
+        /// <summary>Sets plain text and an optional HTML alternative.</summary>
+        /// <param name="plainText">The plain-text content.</param>
+        /// <param name="html">The HTML content, or null to clear it.</param>
+        /// <returns>This builder.</returns>
+        IEmailMessageBuilder Body(string plainText, string html = null);
+
+        /// <summary>Creates an independent message snapshot without I/O.</summary>
+        /// <returns>A message independent of future builder changes; legacy streams remain borrowed.</returns>
+        IEmailMessage Build();
+
         /// <summary>
         /// Save a copy of the current message as the default template for new messages.
         /// </summary>
@@ -100,7 +117,7 @@
         /// <summary>
         /// Copy this email writer to re-use it as a template.
         /// </summary>
-        /// <returns>Shallow copy of this email writer.</returns>
+        /// <returns>A builder with independent message and template state.</returns>
         IEmailMessageBuilder Copy();
 
         /// <summary>

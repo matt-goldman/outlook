@@ -20,19 +20,19 @@ var emailSenderOptions = configuration.GetRequiredSection(EmailOptions.SectionNa
 using var smtpSender = new MailKitSmtpSender(Options.Create(emailSenderOptions), new MimeMessageValidator(),
     loggerFactory.CreateLogger<MailKitSmtpSender>());
 await smtpSender.SmtpClient.GetConnectedAuthenticatedAsync<SmtpClient>(emailSenderOptions);
-var writtenEmail = smtpSender.WriteEmail
-    .From("my.name@example.com")
-    .To("YourName@example.com")
-    .Subject("Hello World")
-    .BodyText("Optional text/plain content.")
-    .BodyHtml("Optional text/html content.<br/>")
+var writtenEmail = new EmailMessageBuilder()
+    .Compose(email => email
+        .From("my.name@example.com")
+        .Subject("Hello World")
+        .Body("Optional text/plain content.", "Optional text/html content.<br/>"))
     .Attach(Path.Combine(AppContext.BaseDirectory, "appsettings.json"))
     .SaveAsTemplate();
-bool isSent = await smtpSender.TrySendAsync(writtenEmail.Email);
+var firstEmail = writtenEmail.Copy().To("YourName@example.com").Build();
+bool isSent = await smtpSender.TrySendAsync(firstEmail);
 logger.LogInformation("Email 1 {result}.", isSent ? "sent" : "failed to send");
 
-writtenEmail.To("new@io");
-isSent = await smtpSender.TrySendAsync(writtenEmail.Email);
+var secondEmail = writtenEmail.Copy().To("new@io").Build();
+isSent = await smtpSender.TrySendAsync(secondEmail);
 logger.LogInformation("Email 2 {result}.", isSent ? "sent" : "failed to send");
 
 var emailReceiverOptions = configuration.GetRequiredSection(EmailOptions.SectionName).Get<ImapOptions>()!;

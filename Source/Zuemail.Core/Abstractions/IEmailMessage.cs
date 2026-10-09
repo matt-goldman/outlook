@@ -65,7 +65,7 @@ namespace Zuemail.Core.Abstractions
         /// <summary>
         /// Copy this email message to re-use it.
         /// </summary>
-        /// <returns>Shallow copy of this email message.</returns>
+        /// <returns>Independent mutable state; non-byte attachment objects remain borrowed references.</returns>
         IEmailMessage Copy();
 
         /// <summary>

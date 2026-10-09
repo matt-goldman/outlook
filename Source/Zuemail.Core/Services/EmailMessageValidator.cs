@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Mail;
+using System.Threading;
 using System.Threading.Tasks;
 using Zuemail.Core.Abstractions;
 using Zuemail.Core.Models;
@@ -9,7 +11,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Zuemail.Core.Services
 {
-    public class EmailMessageValidator : IValidationStrategy<IEmailMessage>
+    public class EmailMessageValidator : ICancellableValidationStrategy<IEmailMessage>
     {
         private readonly ILogger<EmailMessageValidator> logger;
 
@@ -20,22 +22,30 @@ namespace Zuemail.Core.Services
 
         public virtual Task<bool> ValidateAsync(IEmailMessage email)
         {
-            bool isValid = false;
-            if (email != null)
-            {
-                var from = email.From.Select(m => m.EmailAddress);
-                var toCcBcc = email.To.Select(m => m.EmailAddress)
-                    .Concat(email.Cc.Select(m => m.EmailAddress))
-                    .Concat(email.Bcc.Select(m => m.EmailAddress));
-                isValid = ValidateEmailAddresses(from, toCcBcc, logger);
-#if DEBUG
-                if (email.ReplyTo.Count == 0 && email.From.Count == 0)
-                    email.ReplyTo.Add(EmailContact.Create("Unmonitored", $"noreply@localhost"));
-                if (email.From.Count == 0)
-                    email.From.Add(EmailContact.Create("LocalHost", $"{Guid.NewGuid():N}@localhost"));
-#endif
-            }
+            if (email == null || email.From == null || email.To == null || email.Cc == null ||
+                email.Bcc == null || email.ReplyTo == null || email.Headers == null)
+                return Task.FromResult(false);
+            var from = email.From.ToArray();
+            var recipients = email.To.Concat(email.Cc).Concat(email.Bcc).ToArray();
+            var contacts = from.Concat(recipients).Concat(email.ReplyTo).ToArray();
+            if (contacts.Any(contact => contact == null || HasHeaderDelimiters(contact.Name)) ||
+                HasHeaderDelimiters(email.Subject) || email.Headers.Any(header =>
+                    !IsHeaderName(header.Key) || header.Value == null || HasHeaderDelimiters(header.Value)))
+                return Task.FromResult(false);
+            bool isValid = ValidateEmailAddresses(from.Select(contact => contact.EmailAddress),
+                recipients.Select(contact => contact.EmailAddress), logger);
+            isValid &= email.ReplyTo.All(contact => IsEmailAddress(contact.EmailAddress));
             return Task.FromResult(isValid);
+        }
+
+        /// <summary>Validates synchronously while respecting cancellation at entry.</summary>
+        /// <param name="email">The message, which is never mutated.</param>
+        /// <param name="cancellationToken">Cancels validation.</param>
+        /// <returns>Whether the message is valid.</returns>
+        public virtual Task<bool> ValidateAsync(IEmailMessage email, CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return ValidateAsync(email);
         }
 
         public static bool ValidateEmailAddresses(IEnumerable<string> sourceEmailAddresses, IEnumerable<string> destinationEmailAddresses, ILogger logger)
@@ -44,37 +54,33 @@ namespace Zuemail.Core.Services
                 throw new ArgumentNullException(nameof(sourceEmailAddresses));
             if (destinationEmailAddresses is null)
                 throw new ArgumentNullException(nameof(destinationEmailAddresses));
-            bool isValid = true;
-            int sourceEmailAddressCount = 0, destinationEmailAddressCount = 0;
-            foreach (var from in sourceEmailAddresses)
-            {
-                if (!from.Contains('@'))
-                {
-                    logger.LogWarning($"From address is invalid ({from})");
-                    isValid = false;
-                }
-                foreach (var to in destinationEmailAddresses)
-                {
-                    if (!to.Contains('@'))
-                    {
-                        logger.LogWarning($"To address is invalid ({to})");
-                        isValid = false;
-                    }
-                    if (to.Equals(from, StringComparison.OrdinalIgnoreCase))
-                    {
-                        logger.LogWarning($"Circular reference, To ({to}) == From ({from})");
-                        isValid = false;
-                    }
-                    destinationEmailAddressCount++;
-                }
-                sourceEmailAddressCount++;
-            }
-            if (sourceEmailAddressCount == 0)
-                logger.LogWarning("Source email address not specified");
-            else if (destinationEmailAddressCount == 0)
-                logger.LogWarning("Destination email address not specified");
-            isValid &= sourceEmailAddressCount > 0 && destinationEmailAddressCount > 0;
+            var sources = sourceEmailAddresses.ToArray();
+            var destinations = destinationEmailAddresses.ToArray();
+            bool isValid = sources.Length > 0 && destinations.Length > 0 &&
+                sources.All(IsEmailAddress) && destinations.All(IsEmailAddress);
+            if (!isValid)
+                (logger ?? NullLogger.Instance).LogWarning("An email requires valid sender and recipient addresses.");
             return isValid;
         }
+
+        private static bool IsEmailAddress(string address)
+        {
+            if (string.IsNullOrWhiteSpace(address) || HasHeaderDelimiters(address))
+                return false;
+            try
+            {
+                return new MailAddress(address).Address.Equals(address.Trim(), StringComparison.OrdinalIgnoreCase);
+            }
+            catch (FormatException)
+            {
+                return false;
+            }
+        }
+
+        private static bool HasHeaderDelimiters(string value) =>
+            value != null && value.IndexOfAny(new[] { '\r', '\n', '\0' }) >= 0;
+
+        private static bool IsHeaderName(string value) => !string.IsNullOrEmpty(value) &&
+            value.All(character => character >= 33 && character <= 126 && character != ':');
     }
 }

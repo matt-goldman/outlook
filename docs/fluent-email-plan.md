@@ -22,27 +22,27 @@ Do not introduce another Core/Hosting/Provider project merely to reorganize name
 - [x] Share `netstandard2.0;net10.0` across Core and MailKit; remove their duplicate framework/URL declarations. Keep console/app target selection separate.
 - [x] Remove the unused Gateway project and its solution, console, and shared-build references.
 - [x] Set C# 14 for library builds so existing global usings/file-scoped namespaces also compile for `netstandard2.0`; keep runtime targeting separate from language version.
-- [ ] Pin an approved .NET 10 SDK in `global.json`; use an intentional roll-forward policy.
-- [ ] Add a small xUnit executable test project on `net10.0` using Microsoft.Testing.Platform v2 and direct `dotnet test --project <project>` execution; avoid legacy adapters.
+- [x] Pin the installed .NET 10 SDK (`10.0.401`) in `global.json` with `latestPatch` roll-forward and previews disabled.
+- [x] Add a small xUnit executable test project on `net10.0` using Microsoft.Testing.Platform v2 and direct `dotnet test --project <project>` execution; avoid legacy adapters.
 - [ ] Check package resource paths independently; decide the MAUI framework/workload upgrade separately from the library work. Do not silently change the app's platform targets.
 
 ## Phase 2: Independent Messages and Reusable Composition
 
-- [ ] Replace message/builder shallow copying with independent headers, recipient lists, contacts, attachment dictionaries, and byte arrays. Preserve documented caller ownership of legacy streams.
-- [ ] Stop new builders and option factories from sharing mutable static `Default` instances. Clone defaults or use factories; prove two callers cannot mutate each other's state.
-- [ ] Add `Compose(Action<IEmailMessageBuilder>)` to the fluent contract and implementation; invoke it immediately and return the same builder. Reuse actions for signatures, campaigns, recipients, and standard headers.
-- [ ] Add `Body(string plainText, string html = null)` as a convenience over the existing body properties. No content tree or multipart domain abstraction is needed.
-- [ ] Add `Build()` returning an independent message snapshot without file access or transport I/O; keep existing `Email` and `Copy()` behavior documented.
-- [ ] Make `SaveAsTemplate()` capture independent state, initialize builders from independent configured defaults, and ensure composing/copying a template does not mutate the original.
+- [x] Replace message/builder shallow copying with independent headers, recipient lists, contacts, attachment dictionaries, and byte arrays. Preserve documented caller ownership of legacy streams.
+- [x] Stop new builders from sharing mutable `EmailMessage.Default` state. Clone defaults and prove callers cannot mutate each other's messages. Option factories remain a phase 4 task.
+- [x] Add `Compose(Action<IEmailMessageBuilder>)` to the fluent contract and implementation; invoke it immediately and return the same builder. Reuse actions for signatures, campaigns, recipients, and standard headers.
+- [x] Add `Body(string plainText, string html = null)` as a convenience over the existing body properties. No content tree or multipart domain abstraction is needed.
+- [x] Add `Build()` returning an independent message snapshot without file access or transport I/O; keep existing `Email` and `Copy()` behavior documented.
+- [x] Make `SaveAsTemplate()` capture independent state, initialize builders from independent configured defaults, and ensure composing/copying a template does not mutate the original.
 
 ## Phase 3: Send Handler and Validation
 
-- [ ] Keep `EmailMessageHandler` as the execution boundary over `EmailMessageBuilder` and the sender interface; do not add a client or send methods to the plain builder.
-- [ ] Supply a default validation strategy when none is configured; allow an explicit alternate strategy without null dereferences.
-- [ ] Respect a failed validation result instead of sending anyway. Validate From and the combined To/Cc/Bcc set once, reject header injection, and never manufacture addresses or mutate messages in validation.
-- [ ] Propagate cancellation through validation and transport; retain compatibility overloads when adding cancellation to validation contracts. Keep synchronous checks synchronous unless actual I/O is required.
-- [ ] Reset from an independent template after confirmed success. Retain the composed message after failure, cancellation, or `TrySendAsync(false)`; document explicit reset behavior.
-- [ ] Test repeated sends, template reset, cancellation, validation failure, and message retention with a fake sender before connecting to a real server.
+- [x] Keep `EmailMessageHandler` as the execution boundary over `EmailMessageBuilder` and the sender interface; do not add a client or send methods to the plain builder.
+- [x] Supply a default validation strategy when none is configured; allow an explicit alternate strategy without null dereferences.
+- [x] Respect a failed validation result instead of sending anyway. Validate From and the combined To/Cc/Bcc set once, reject header injection, and never manufacture addresses or mutate messages in validation.
+- [x] Propagate cancellation through handler validation and transport. Existing `IValidationStrategy<T>` implementations remain supported; optional `ICancellableValidationStrategy<T>` receives the token. Legacy strategies are checked before/after execution but cannot be interrupted by the handler.
+- [x] Reset from an independent template after confirmed success. Retain the composed message after failure, cancellation, or `TrySendAsync(false)`; document explicit reset behavior.
+- [x] Test repeated sends, template reset, cancellation, validation failure, and message retention with a fake sender before connecting to a real server.
 - [x] Use a simple composition-then-send pattern in the console instead of calling terminal handler methods on `IEmailMessageBuilder`. A broader handler-interface redesign is not required for this sample.
 
 ## Phase 4: Options, Attachments and MailKit Execution
@@ -82,9 +82,9 @@ Do not introduce another Core/Hosting/Provider project merely to reorganize name
 5. Fix host/options parsing and client ownership; add typed attachments using MimeKit `BodyBuilder`.
 6. Finish configuration/sample usage and local SMTP verification. Leave pooling, queueing, cloud adapters, and elaborate policy frameworks for demonstrated needs.
 
-## Planned Fluent Shape
+## Fluent Shape
 
-The methods below describe the target API; they are not all implemented yet.
+The builder methods below are implemented. Sending still uses an explicitly configured provider.
 
 ```csharp
 Action<IEmailMessageBuilder> welcome = email => email
@@ -103,7 +103,7 @@ await sender.SendAsync(message, cancellationToken);
 
 ## Completion Criteria
 
-- [ ] Two independently composed messages/defaults/templates never share mutable state.
+- [x] Independently composed messages/defaults/templates isolate mutable message collections, contacts, and byte arrays; legacy stream/object attachments remain explicitly borrowed.
 - [ ] Fluent construction performs no network/file I/O; explicit sending respects validation and cancellation.
 - [ ] Core remains unaware of MailKit, while provider client/MIME resource ownership is explicit and tested.
 - [ ] The simple MailKit workflow passes focused tests and both library TFMs before optional throughput features are added.
@@ -115,4 +115,15 @@ await sender.SendAsync(message, cancellationToken);
 - MSBuild evaluation confirms the console has `TargetFramework=net10.0` and no inherited `TargetFrameworks`. MAUI platform targets are unchanged; its workloads/build were not validated.
 - Gateway has been removed; no replacement project is introduced.
 - The console now builds using `Microsoft.NET.Sdk` without warnings or errors. Configuration/attachment paths resolve from the executable directory; SMTP options are passed directly to the provider, and IMAP reads/IDLE use the existing MailKit client APIs.
-- The console has not been executed against a live mail server. Provider lifecycle, validation/defaults, template safety, and automated tests remain tasks in this plan; no test framework migration is claimed.
+- The initial setup did not execute the console against a live server or introduce automated tests. Subsequent verified composition/handler/test work is recorded below; provider lifecycle and live-server verification remain outstanding.
+
+## Verified Composition and Handler Increment
+
+- `dotnet test --project tests/Zuemail.Core.Tests/Zuemail.Core.Tests.csproj`: 30 passed, 0 failed, 0 skipped using the pinned SDK and MTP runner.
+- `dotnet build Source/Zuemail.slnx -p:GeneratePackageOnBuild=false`: passes for Core/MailKit on both library targets, the console, and Core tests. Tests are included in the solution.
+- `Compose()`, `Body()`, detached `Build()`, default/configured-template cloning, and independent `Copy()`/`SaveAsTemplate()` are implemented. Streams and arbitrary non-byte attachment objects remain borrowed; file paths are not opened during copying/building.
+- Copying does not access the lazily computed body preview or mutate the source text. Header/attachment dictionary comparers are retained when their source is a `Dictionary`.
+- The handler uses a nonmutating default validator, respects custom validation results, forwards cancellation, and resets only after a successful send. `SendAsync()` throws on invalid content; `TrySendAsync()` returns false. Sender exceptions/cancellation retain the message and are not swallowed by the handler.
+- The default validator uses BCL address parsing, accepts To/Cc/Bcc recipients and legitimate self-addressed mail, rejects header injection, and does not invent debug-only sender/reply addresses.
+- The console now demonstrates reusable composition and independent per-recipient messages instead of sharing live builder state. It was compiled, not executed against a server.
+- Next: phase 4 option factories/host parsing and MailKit client ownership, followed by typed attachments. MailKit's direct sender paths still need their provider-specific validation/lifecycle/cancellation work; Core fake-sender tests do not claim those paths are fixed.

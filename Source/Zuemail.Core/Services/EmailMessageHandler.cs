@@ -15,15 +15,15 @@ namespace Zuemail.Core.Services
         public EmailMessageHandler(IEmailSender<IEmailMessage> emailSender, IOptions<IEmailMessage> options = null, IValidationStrategy<IEmailMessage> validationStrategy = null) : base(options)
         {
             _emailSender = emailSender ?? throw new ArgumentNullException(nameof(emailSender));
-            _validationStrategy = validationStrategy;
+            _validationStrategy = validationStrategy ?? new EmailMessageValidator();
         }
 
         public static EmailMessageHandler Create(IEmailSender<IEmailMessage> emailSender, IEmailMessage template = null) =>
-            new EmailMessageHandler(emailSender) { Template = template };
+            new EmailMessageHandler(emailSender, template == null ? null : Options.Create(template));
 
         public EmailMessageHandler SetStrategy(IValidationStrategy<IEmailMessage> validator)
         {
-            _validationStrategy = validator;
+            _validationStrategy = validator ?? throw new ArgumentNullException(nameof(validator));
             return this;
         }
 
@@ -35,17 +35,30 @@ namespace Zuemail.Core.Services
 
         public async Task SendAsync(CancellationToken cancellationToken = default)
         {
-            _ = await _validationStrategy.ValidateAsync(Email).ConfigureAwait(false);
+            if (!await ValidateAsync(cancellationToken).ConfigureAwait(false))
+                throw new InvalidOperationException("The email failed validation and was not sent.");
             await _emailSender.SendAsync(Email, cancellationToken).ConfigureAwait(false);
-            Email = Template != null ? Template.Copy() : EmailMessage.Default;
+            Email = (Template ?? EmailMessage.Default).Copy();
         }
 
         public async Task<bool> TrySendAsync(CancellationToken cancellationToken = default)
         {
-            _ = await _validationStrategy.ValidateAsync(Email).ConfigureAwait(false);
+            if (!await ValidateAsync(cancellationToken).ConfigureAwait(false))
+                return false;
             bool isSent = await _emailSender.TrySendAsync(Email, cancellationToken).ConfigureAwait(false);
-            Email = Template != null ? Template.Copy() : EmailMessage.Default;
+            if (isSent)
+                Email = (Template ?? EmailMessage.Default).Copy();
             return isSent;
+        }
+
+        private async Task<bool> ValidateAsync(CancellationToken cancellationToken)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var result = _validationStrategy is ICancellableValidationStrategy<IEmailMessage> cancellable ?
+                await cancellable.ValidateAsync(Email, cancellationToken).ConfigureAwait(false) :
+                await _validationStrategy.ValidateAsync(Email).ConfigureAwait(false);
+            cancellationToken.ThrowIfCancellationRequested();
+            return result;
         }
     }
 }
