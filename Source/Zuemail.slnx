@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/Solution Items/">
+    <File Path="../LICENSE" />
+    <File Path="../README.md" />
+  </Folder>
+  <Project Path="ConsoleServiceExample/ConsoleServiceExample.csproj" />
+  <Project Path="Zuemail.Core/Zuemail.Core.csproj" />
+  <Project Path="Zuemail.MailKit/Zuemail.MailKit.csproj" />
+</Solution>

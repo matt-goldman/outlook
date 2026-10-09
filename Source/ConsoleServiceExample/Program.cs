@@ -1,4 +1,6 @@
 ﻿using MailKit;
+using MailKit.Net.Imap;
+using MailKit.Net.Smtp;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Configuration;
@@ -7,47 +9,65 @@ using Zuemail.Core.Services;
 using Zuemail.Core.Extensions;
 using Zuemail.MailKit.Services;
 using Zuemail.MailKit.Models;
+using Zuemail.MailKit.Extensions;
 
 using var loggerFactory = LoggerFactory.Create(_ => _.SetMinimumLevel(LogLevel.Trace).AddDebug().AddConsole()); //.AddSimpleConsole(o => { o.IncludeScopes = true; o.TimestampFormat = "HH:mm:ss.f "; })
 var logger = loggerFactory.CreateLogger<Program>();
 
-var configuration = new ConfigurationBuilder().AddJsonFile("appsettings.json").Build();
+var configuration = new ConfigurationBuilder().SetBasePath(AppContext.BaseDirectory).AddJsonFile("appsettings.json").Build();
 
 var emailSenderOptions = configuration.GetRequiredSection(EmailOptions.SectionName).Get<SmtpOptions>()!;
-using var smtpSender = MailKitSmtpSender.Create(emailSenderOptions.Host, logger: loggerFactory.CreateLogger<MailKitSmtpSender>()); //SmtpSender.Create("localhost");
+using var smtpSender = new MailKitSmtpSender(Options.Create(emailSenderOptions), new MimeMessageValidator(),
+    loggerFactory.CreateLogger<MailKitSmtpSender>());
+await smtpSender.SmtpClient.GetConnectedAuthenticatedAsync<SmtpClient>(emailSenderOptions);
 var writtenEmail = smtpSender.WriteEmail
     .From("my.name@example.com")
     .To("YourName@example.com")
     .Subject("Hello World")
     .BodyText("Optional text/plain content.")
     .BodyHtml("Optional text/html content.<br/>")
-    .Attach("appsettings.json")
+    .Attach(Path.Combine(AppContext.BaseDirectory, "appsettings.json"))
     .SaveAsTemplate();
 bool isSent = await smtpSender.TrySendAsync(writtenEmail.Email);
 logger.LogInformation("Email 1 {result}.", isSent ? "sent" : "failed to send");
 
-isSent = await writtenEmail.To("new@io").TrySendAsync();
+writtenEmail.To("new@io");
+isSent = await smtpSender.TrySendAsync(writtenEmail.Email);
 logger.LogInformation("Email 2 {result}.", isSent ? "sent" : "failed to send");
 
-var emailReceiverOptions = Options.Create(configuration.GetRequiredSection(EmailOptions.SectionName).Get<ImapOptions>()!);
-//var imapLogger = new MailKitProtocolLogger(loggerFactory.CreateLogger<MailKitProtocolLogger>());
-using var imapReceiver = new MailKitImapReceiver(emailReceiverOptions, loggerFactory.CreateLogger<MailKitImapReceiver>()); //ImapReceiver.Create("localhost");
+var emailReceiverOptions = configuration.GetRequiredSection(EmailOptions.SectionName).Get<ImapOptions>()!;
+using var imapClient = new ImapClient { Timeout = emailReceiverOptions.TimeoutMs };
+await imapClient.ConnectAsync(emailReceiverOptions.Host, emailReceiverOptions.Port, emailReceiverOptions.SocketOptions);
+await imapClient.AuthenticateAsync(emailReceiverOptions.Credential);
 
-var mailFolderReader = imapReceiver.ReadFrom("INBOX").Skip(5).Take(2);
-var messageSummaries = await mailFolderReader.GetMessageSummariesAsync(MessageSummaryItems.UniqueId);
-//logger.LogDebug("Email(s) received: {fields}", messageSummaries.FirstOrDefault()?.Fields);
-logger.LogDebug("Email(s) received: {ids}.", messageSummaries.Select(m => m.UniqueId).ToEnumeratedString());
-
-var mimeMessages = await imapReceiver.ReadMail.Skip(0).Take(1).GetMimeMessagesAsync();
-logger.LogDebug("Email(s) received: {ids}.", mimeMessages.Select(m => m.MessageId).ToEnumeratedString());
-
-await imapReceiver.MonitorFolder
-    .SetMessageSummaryItems().SetIgnoreExistingMailOnConnect()
-    .OnMessageArrival(OnArrivalAsync)
-    .IdleAsync();
-
-Task OnArrivalAsync(IMessageSummary m)
+var inbox = imapClient.Inbox;
+await inbox.OpenAsync(FolderAccess.ReadOnly);
+if (inbox.Count > 5)
 {
-    Console.WriteLine(m.UniqueId);
-    return Task.CompletedTask;
+    var messageSummaries = await inbox.FetchAsync(5, Math.Min(6, inbox.Count - 1), MessageSummaryItems.UniqueId);
+    logger.LogDebug("Email(s) received: {ids}.", string.Join(", ", messageSummaries.Select(message => message.UniqueId)));
 }
+if (inbox.Count > 0)
+{
+    using var message = await inbox.GetMessageAsync(0);
+    logger.LogDebug("Email received: {id}.", message.MessageId);
+}
+
+if (imapClient.Capabilities.HasFlag(ImapCapabilities.Idle))
+{
+    using var cancellation = new CancellationTokenSource();
+    Console.CancelKeyPress += (_, args) => { args.Cancel = true; cancellation.Cancel(); };
+    inbox.CountChanged += (_, _) => logger.LogInformation("Inbox contains {count} messages.", inbox.Count);
+    try
+    {
+        while (!cancellation.IsCancellationRequested)
+        {
+            using var idle = new CancellationTokenSource(TimeSpan.FromMinutes(9));
+            await imapClient.IdleAsync(idle.Token, cancellation.Token);
+        }
+    }
+    catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+    {
+    }
+}
+await imapClient.DisconnectAsync(true);
