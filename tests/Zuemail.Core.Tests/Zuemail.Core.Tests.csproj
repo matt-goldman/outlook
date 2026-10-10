@@ -11,6 +11,6 @@
     <PackageReference Include="xunit.v3" Version="4.0.1" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="../../Source/Zuemail.Core/Zuemail.Core.csproj" />
+    <ProjectReference Include="../../source/Zuemail.Core/Zuemail.Core.csproj" />
   </ItemGroup>
 </Project>
